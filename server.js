@@ -1,8 +1,9 @@
+
 const express = require('express')
     app = express()
 
     mongoose = require('mongoose'),
-    db = mongoose.connect('mongodb://localhost/mydb'),
+    db = mongoose.connect('mongodb://localhost/alumniDataBase'),
     Schema = mongoose.Schema;
     var bodyParser = require('body-parser')
     app.use( bodyParser.json() );       // to support JSON-encoded bodies
@@ -16,6 +17,7 @@ const express = require('express')
     app.listen(8080);
 
 var User = new Schema({
+  timestamp: String,
   entryNumber: String,
 	userName: String,
   firstName: String,
@@ -101,25 +103,21 @@ app.get('/', function(request, response){
     response.sendfile('index.html');
 });
 
-app.get('/user', function(req, res) {
-    console.log('here in user');
-    var userModel = mongoose.model('User', User);
-    userModel.findOne({'entryNumber': '2010CS1016'}, function(err, user) {
-      if (user != null) {
-        console.log('Found the User:' + user.userName);
-        res.send(JSON.stringify(user));
-      }else{
-        console.log('user not found!');
-        res.send('User not found!');
-      }
-    });
-});
-
+/*
+  get user on the basis of emailId
+*/
 app.get('/userData/:emailId', function(req, res) {
     var emailId = req.params.emailId;
     console.log(emailId);
-    var userModel = mongoose.model('User', User);
-    userModel.findOne({'userName': emailId}, function(err, user) {
+    var userModel = mongoose.model('alumnus', User);
+
+  /*
+  Query for any valid email ID sotred
+  */
+    query = { $or:[ {'iitRoparEmailAddress':emailId}, {'primaryEmailAddress':emailId},
+    {'alternateEmailAddress':emailId} ]}
+
+    userModel.findOne( query, function(err, user) {
       if (user != null) {
         console.log('Found the User:' + user.userName);
         res.send(JSON.stringify(user));
@@ -130,10 +128,14 @@ app.get('/userData/:emailId', function(req, res) {
     });
 });
 
+
+/*
+  get user on the basis of _id
+*/
 app.get('/userDataID/:id', function(req, res) {
     var id = req.params.id;
     console.log(id);
-    var userModel = mongoose.model('User', User);
+    var userModel = mongoose.model('alumnus', User);
     var ObjectId = require('mongodb').ObjectId;
     var o_id = new ObjectId(id);
     userModel.findOne({_id: o_id}, function(err, user) {
@@ -147,29 +149,55 @@ app.get('/userDataID/:id', function(req, res) {
     });
 });
 
+/*
+  update the existing user
+*/
 app.post('/updateUserData', function(req, res){
-  console.log("^^^^^")
 
   var newvalues = {};
-  for (var param in req.body) {
-
-    newvalues[param] = req.body[param]
-   //console.log(param, req.body[param]);
-}
-
-console.log(newvalues)
-   if(req.body == null){
+  if(req.body == null)
+  {
     console.log('body is empty' );
        throw 0;
-   }
-   var userModel = mongoose.model('User', User);
-   var myquery = { _id: req.body._id };
-  // var newvalues = { userName: req.body.userName, entryNumber: req.body.entryNumber };
-   userModel.updateOne(myquery, newvalues, function(err) {
-       if (err) throw err;
-   });
-   console.log('updated* '  + req.body.username + ' ' + req.body );
-   res.redirect('./login.html');
-  // res.send(JSON.stringify(usr));
+  }
+  for (var param in req.body)
+  {
+    newvalues[param] = req.body[param]
+  }
 
+  console.log(newvalues)
+  var userModel = mongoose.model('alumnus', User);
+  var myquery = { _id: req.body._id };
+  userModel.updateOne(myquery, newvalues, function(err) {
+       if (err) throw err;
+  });
+  console.log('updated: '  + req.body.userName );
+  res.redirect('./login.html');
+});
+
+/*
+  add new user.
+*/
+app.post('/addNewUser', function(req, res){
+
+  if(req.body == null)
+  {
+    console.log('body is empty' );
+       throw 0;
+  }
+  var newvalues = {};
+  for (var param in req.body)
+  {
+    newvalues[param] = req.body[param]
+  }
+
+  console.log(newvalues)
+
+  var userModel = mongoose.model('alumnus', User);
+
+  userModel.create(newvalues, function (err, small) {
+  if (err) return handleError(err);
+      console.log('Saved: '  + req.body.userName + ' ' + req.body );
+  });
+  res.redirect('./login.html');
 });
